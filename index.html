@@ -1718,182 +1718,162 @@
         drawMap();
     }
 
-    function setupEventListeners() {
-        // Исправленные обработчики мыши
-        canvas.addEventListener('mousedown', handleMouseDown);
-        canvas.addEventListener('mousemove', handleMouseMove);
-        canvas.addEventListener('mouseup', handleMouseUp);
-        canvas.addEventListener('wheel', handleWheel);
+function setupEventListeners() {
+    // Исправленные обработчики мыши
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('wheel', handleWheel);
+    
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
         
-canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - offsetX) / scale;
-    const y = (e.clientY - rect.top - offsetY) / scale;
-    
-    // Проверка клика по территориям
-    for (let i = territories.length - 1; i >= 0; i--) {
-        const territory = territories[i];
-        if (x >= territory.x && x <= territory.x + territory.width &&
-            y >= territory.y && y <= territory.y + territory.height) {
-            // ЕСЛИ КЛИКАЕМ НА УЖЕ ВЫБРАННУЮ ТЕРРИТОРИЮ - СКРЫВАЕМ ПОДСКАЗКУ
-            if (selectedTerritory === territory) {
-                hideTooltip();
-            } else {
-                showTooltip(territory, e.clientX, e.clientY);
-            }
-            return;
-        }
-    }
-    
-    // ЕСЛИ КЛИКНУЛИ НА ПУСТОЕ МЕСТО - СКРЫВАЕМ ПОДСКАЗКУ
-    hideTooltip();
-});
-        })
-            
-            // Проверка клика по территориям
-            for (let i = territories.length - 1; i >= 0; i--) {
-                const territory = territories[i];
-                if (x >= territory.x && x <= territory.x + territory.width &&
-                    y >= territory.y && y <= territory.y + territory.height) {
-                    // ЕСЛИ КЛИКАЕМ НА УЖЕ ВЫБРАННУЮ ТЕРРИТОРИЮ - СКРЫВАЕМ ПОДСКАЗКУ
-                    if (selectedTerritory === territory) {
-                        hideTooltip();
-                    } else {
-                        showTooltip(territory, e.clientX, e.clientY);
-                    }
-                    return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+        
+        // Проверка клика по территориям
+        for (let i = territories.length - 1; i >= 0; i--) {
+            const territory = territories[i];
+            if (x >= territory.x && x <= territory.x + territory.width &&
+                y >= territory.y && y <= territory.y + territory.height) {
+                // ЕСЛИ КЛИКАЕМ НА УЖЕ ВЫБРАННУЮ ТЕРРИТОРИЮ - СКРЫВАЕМ ПОДСКАЗКУ
+                if (selectedTerritory === territory) {
+                    hideTooltip();
+                } else {
+                    showTooltip(territory, e.clientX, e.clientY);
                 }
-            }
-            
-            // ЕСЛИ КЛИКНУЛИ НА ПУСТОЕ МЕСТО - СКРЫВАЕМ ПОДСКАЗКУ
-            hideTooltip();
-        });
-        
-        // Обработчики для кнопок режимов
-        document.getElementById('mode-new').addEventListener('click', () => setMode('new'));
-        document.getElementById('mode-add').addEventListener('click', () => setMode('add'));
-        document.getElementById('mode-delete').addEventListener('click', () => setMode('delete'));
-        
-        // Обработчики для кнопок управления
-        document.getElementById('add-territory').addEventListener('click', startDrawing);
-        document.getElementById('cancel-drawing').addEventListener('click', cancelDrawing);
-        
-        // ОБРАБОТЧИКИ ДЛЯ ЭКСПОРТА/ИМПОРТА
-        document.getElementById('export-data').addEventListener('click', exportData);
-        document.getElementById('import-data').addEventListener('click', function() {
-            document.getElementById('file-input').click();
-        });
-        document.getElementById('file-input').addEventListener('change', importData);
-        
-        document.getElementById('zoom-in').addEventListener('click', () => {
-            scale *= 1.2;
-            scale = Math.min(5, scale);
-            drawMap();
-        });
-        
-        document.getElementById('zoom-out').addEventListener('click', () => {
-            scale /= 1.2;
-            scale = Math.max(0.1, scale);
-            drawMap();
-        });
-        
-        document.getElementById('reset-view').addEventListener('click', () => {
-            scale = 1;
-            offsetX = 0;
-            offsetY = 0;
-            drawMap();
-        });
-        
-        // Обработчики для модального окна банд
-        document.getElementById('tooltip-edit').addEventListener('click', function() {
-            if (selectedTerritory) {
-                document.getElementById('modal-gang-name').value = selectedTerritory.name || '';
-                document.getElementById('modal-gang-leader').value = selectedTerritory.leader || '';
-                document.getElementById('modal-gang-members').value = selectedTerritory.members || '';
-                document.getElementById('modal-gang-description').value = selectedTerritory.description || '';
-                document.getElementById('info-modal').style.display = 'flex';
-            }
-        });
-        
-        document.getElementById('tooltip-close').addEventListener('click', hideTooltip);
-        
-        document.getElementById('save-info').addEventListener('click', function() {
-            if (!selectedTerritory) return;
-            
-            const newName = document.getElementById('modal-gang-name').value.trim();
-            if (!newName) {
-                alert('Пожалуйста, введите название банды');
                 return;
             }
-            
-            const newLeader = document.getElementById('modal-gang-leader').value.trim();
-            const newMembers = parseInt(document.getElementById('modal-gang-members').value) || 0;
-            const newDescription = document.getElementById('modal-gang-description').value.trim();
-            
-            const oldName = selectedTerritory.name;
-            
-            territories.forEach(territory => {
-                if (territory.name === oldName) {
-                    territory.name = newName;
-                    territory.leader = newLeader;
-                    territory.members = newMembers;
-                    territory.description = newDescription;
-                }
-            });
-            
-            if (selectedGang && selectedGang.name === oldName) {
-                selectedGang.name = newName;
-                selectedGang.leader = newLeader;
-                selectedGang.members = newMembers;
-                selectedGang.description = newDescription;
+        }
+        
+        // ЕСЛИ КЛИКНУЛИ НА ПУСТОЕ МЕСТО - СКРЫВАЕМ ПОДСКАЗКУ
+        hideTooltip();
+    });
+    
+    // Обработчики для кнопок режимов
+    document.getElementById('mode-new').addEventListener('click', () => setMode('new'));
+    document.getElementById('mode-add').addEventListener('click', () => setMode('add'));
+    document.getElementById('mode-delete').addEventListener('click', () => setMode('delete'));
+    
+    // Обработчики для кнопок управления
+    document.getElementById('add-territory').addEventListener('click', startDrawing);
+    document.getElementById('cancel-drawing').addEventListener('click', cancelDrawing);
+    
+    // ОБРАБОТЧИКИ ДЛЯ ЭКСПОРТА/ИМПОРТА
+    document.getElementById('export-data').addEventListener('click', exportData);
+    document.getElementById('import-data').addEventListener('click', function() {
+        document.getElementById('file-input').click();
+    });
+    document.getElementById('file-input').addEventListener('change', importData);
+    
+    document.getElementById('zoom-in').addEventListener('click', () => {
+        scale *= 1.2;
+        scale = Math.min(5, scale);
+        drawMap();
+    });
+    
+    document.getElementById('zoom-out').addEventListener('click', () => {
+        scale /= 1.2;
+        scale = Math.max(0.1, scale);
+        drawMap();
+    });
+    
+    document.getElementById('reset-view').addEventListener('click', () => {
+        scale = 1;
+        offsetX = 0;
+        offsetY = 0;
+        drawMap();
+    });
+    
+    // Обработчики для модального окна банд
+    document.getElementById('tooltip-edit').addEventListener('click', function() {
+        if (selectedTerritory) {
+            document.getElementById('modal-gang-name').value = selectedTerritory.name || '';
+            document.getElementById('modal-gang-leader').value = selectedTerritory.leader || '';
+            document.getElementById('modal-gang-members').value = selectedTerritory.members || '';
+            document.getElementById('modal-gang-description').value = selectedTerritory.description || '';
+            document.getElementById('info-modal').style.display = 'flex';
+        }
+    });
+    
+    document.getElementById('tooltip-close').addEventListener('click', hideTooltip);
+    
+    document.getElementById('save-info').addEventListener('click', function() {
+        if (!selectedTerritory) return;
+        
+        const newName = document.getElementById('modal-gang-name').value.trim();
+        if (!newName) {
+            alert('Пожалуйста, введите название банды');
+            return;
+        }
+        
+        const newLeader = document.getElementById('modal-gang-leader').value.trim();
+        const newMembers = parseInt(document.getElementById('modal-gang-members').value) || 0;
+        const newDescription = document.getElementById('modal-gang-description').value.trim();
+        
+        const oldName = selectedTerritory.name;
+        
+        territories.forEach(territory => {
+            if (territory.name === oldName) {
+                territory.name = newName;
+                territory.leader = newLeader;
+                territory.members = newMembers;
+                territory.description = newDescription;
             }
+        });
+        
+        if (selectedGang && selectedGang.name === oldName) {
+            selectedGang.name = newName;
+            selectedGang.leader = newLeader;
+            selectedGang.members = newMembers;
+            selectedGang.description = newDescription;
+        }
+        
+        updateLegend();
+        drawMap();
+        saveData();
+        
+        document.getElementById('info-modal').style.display = 'none';
+        selectedTerritory = null;
+        
+        alert('✅ Информация о банде успешно сохранена в облако!');
+    });
+    
+    document.getElementById('delete-territory').addEventListener('click', function() {
+        if (selectedTerritory && confirm(`УДАЛИТЬ ВСЕ ТЕРРИТОРИИ БАНДЫ "${selectedTerritory.name}"? Это действие нельзя отменить!`)) {
+            const gangName = selectedTerritory.name;
+            territories = territories.filter(t => t.name !== gangName);
             
             updateLegend();
             drawMap();
+            document.getElementById('info-modal').style.display = 'none';
+            hideTooltip();
+            
+            if (selectedGang && selectedGang.name === gangName) {
+                selectedGang = null;
+            }
+            
             saveData();
-            
-            document.getElementById('info-modal').style.display = 'none';
+            alert(`✅ Все территории банды "${gangName}" удалены из облака!`);
+        }
+    });
+    
+    document.getElementById('cancel-edit').addEventListener('click', function() {
+        document.getElementById('info-modal').style.display = 'none';
+        selectedTerritory = null;
+    });
+    
+    document.getElementById('info-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.style.display = 'none';
             selectedTerritory = null;
-            
-            alert('✅ Информация о банде успешно сохранена в облако!');
-        });
-        
-        document.getElementById('delete-territory').addEventListener('click', function() {
-            if (selectedTerritory && confirm(`УДАЛИТЬ ВСЕ ТЕРРИТОРИИ БАНДЫ "${selectedTerritory.name}"? Это действие нельзя отменить!`)) {
-                const gangName = selectedTerritory.name;
-                territories = territories.filter(t => t.name !== gangName);
-                
-                updateLegend();
-                drawMap();
-                document.getElementById('info-modal').style.display = 'none';
-                hideTooltip();
-                
-                if (selectedGang && selectedGang.name === gangName) {
-                    selectedGang = null;
-                }
-                
-                saveData();
-                alert(`✅ Все территории банды "${gangName}" удалены из облака!`);
-            }
-        });
-        
-        document.getElementById('cancel-edit').addEventListener('click', function() {
-            document.getElementById('info-modal').style.display = 'none';
-            selectedTerritory = null;
-        });
-        
-        document.getElementById('info-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.style.display = 'none';
-                selectedTerritory = null;
-            }
-        });
+        }
+    });
 
-        // Обработчик изменения размера окна
-        window.addEventListener('resize', initMap);
-    }
+    // Обработчик изменения размера окна
+    window.addEventListener('resize', initMap);
+}
 
     document.addEventListener('DOMContentLoaded', function() {
         startLoginAnimation();
