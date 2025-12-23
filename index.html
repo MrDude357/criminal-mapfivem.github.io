@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Полицейская база данных - Карта криминальных группировок Сан Фиерро</title>
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', 'Consolas', monospace;
+        }
+        
+        body {
+            background: #000;
+            color: #00ffff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Анимация загрузки */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            background: linear-gradient(135deg, #0a0f1a 0%, #151a2d 100%);
+            border: 2px solid #0066cc;
+            padding: 40px;
+            border-radius: 5px;
+            box-shadow: 0 0 50px rgba(0, 100, 255, 0.6);
+            text-align: center;
+            min-width: 500px;
+            position: relative;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            pointer-events: none;
+            border-radius: 3px;
+        }
+
+        .login-title {
+            color: #00ffff;
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .password-field {
+            background: rgba(0, 30, 60, 0.6);
+            border: 1px solid #0066cc;
+            color: #00ffff;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 20px;
+            background: #00ffff;
+            margin-left: 5px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .loading-dots {
+            font-size: 2rem;
+            margin: 20px 0;
+        }
+
+        .loading-dots span {
+            animation: dotPulse 1.5s infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .welcome-message {
+            font-size: 1.3rem;
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            margin: 20px 0;
+            opacity: 0;
+        }
+
+        .scan-line-login {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            animation: scan 2s linear infinite;
+        }
+
+        /* Основной интерфейс */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0, 100, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 200, 255, 0.05) 0%, transparent 50%);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .sidebar {
+            width: 480px;
+            background: rgba(10, 15, 30, 0.95);
+            border-right: 2px solid #0066cc;
+            padding: 25px;
+            overflow-y: auto;
+            box-shadow: 5px 0 15px rgba(0, 100, 255, 0.3);
+            position: relative;
+        }
+        
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #0a0f1a;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #0066cc;
+            position: relative;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 25%;
+            right: 25%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+        }
+        
+        h1 {
+            color: #00ffff;
+            margin-bottom: 8px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .subtitle {
+            color: #66ccff;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        h2 {
+            color: #00ffff;
+            margin: 20px 0 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-left: 3px solid #0066cc;
+            padding-left: 10px;
+        }
+        
+        .color-legend {
+            margin-bottom: 25px;
+        }
+        
+        .color-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+            background: rgba(0, 50, 100, 0.2);
+            border: 1px solid transparent;
+        }
+        
+        .color-item:hover {
+            background: rgba(0, 100, 200, 0.3);
+            border-color: #0066cc;
+            transform: translateX(5px);
+        }
+        
+        .color-item.selected {
+            background: rgba(0, 100, 200, 0.4);
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        .color-box {
+            width: 16px;
+            height: 16px;
+            margin-right: 12px;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            box-shadow: 0 0 5px currentColor;
+        }
+        
+        .color-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            background: rgba(0, 30, 60, 0.6);
+            border: 1px solid #0066cc;
+            color: #00ffff;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+        }
+        
+        .color-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+            background: rgba(0, 40, 80, 0.8);
+        }
+        
+        .color-input::placeholder {
+            color: #66aaff;
+            opacity: 0.7;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 8px 0;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+            border: 1px solid #0088ff;
+            box-shadow: 0 2px 8px rgba(0, 100, 255, 0.3);
+        }
+        
+        .button:hover {
+            background: linear-gradient(135deg, #0088ff 0%, #0066cc 100%);
+            box-shadow: 0 4px 15px rgba(0, 150, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .button-secondary {
+            background: linear-gradient(135deg, #334455 0%, #223344 100%);
+            border-color: #556677;
+        }
+        
+        .button-secondary:hover {
+            background: linear-gradient(135deg, #556677 0%, #334455 100%);
+        }
+        
+        .button-success {
+            background: linear-gradient(135deg, #00aa44 0%, #008833 100%);
+            border-color: #00cc55;
+        }
+        
+        .button-success:hover {
+            background: linear-gradient(135deg, #00cc55 0%, #00aa44 100%);
+        }
+        
+        .button-danger {
+            background: linear-gradient(135deg, #cc3333 0%, #992222 100%);
+            border-color: #ff4444;
+        }
+        
+        .button-danger:hover {
+            background: linear-gradient(135deg, #ff4444 0%, #cc3333 100%);
+        }
+
+        .button-crime {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            border-color: #0088ff;
+        }
+        
+        .button-crime:hover {
+            background: linear-gradient(135deg, #0088ff 0%, #0066cc 100%);
+        }
+        
+        .territory {
+            position: absolute;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .territory:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(10, 15, 30, 0.9);
+            border: 1px solid #0066cc;
+            border-radius: 5px;
+            padding: 5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .zoom-btn {
+            background: rgba(0, 80, 160, 0.6);
+            color: #00ffff;
+            border: 1px solid #0066cc;
+            width: 35px;
+            height: 35px;
+            font-size: 16px;
+            margin: 3px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        
+        .zoom-btn:hover {
+            background: rgba(0, 120, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #0a0f1a 0%, #151a2d 100%);
+            padding: 25px;
+            border-radius: 5px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 2px solid #0066cc;
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.4);
+            position: relative;
+        }
+        
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            pointer-events: none;
+            border-radius: 3px;
+        }
+        
+        .modal h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #00ffff;
+            text-align: center;
+            border: none;
+            font-size: 1.3rem;
+        }
+        
+        .modal textarea {
+            width: 100%;
+            height: 150px;
+            margin: 10px 0;
+            padding: 12px;
+            background: rgba(0, 30, 60, 0.6);
+            border: 1px solid #0066cc;
+            color: #00ffff;
+            resize: vertical;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .modal textarea:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-buttons .button {
+            margin: 0;
+            flex: 1;
+        }
+        
+        .selected-territory {
+            border: 2px dashed #00ffff !important;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.7) !important;
+        }
+        
+        .legend-empty {
+            text-align: center;
+            color: #6688aa;
+            font-style: italic;
+            padding: 15px;
+            background: rgba(0, 30, 60, 0.3);
+            border: 1px dashed #0066cc;
+            border-radius: 3px;
+        }
+        
+        .drawing-status {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 3px;
+            margin: 15px 0;
+            text-align: center;
+            display: none;
+            border: 1px solid #0088ff;
+            box-shadow: 0 2px 10px rgba(0, 100, 255, 0.4);
+            font-weight: 600;
+        }
+
+        .crime-status {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 3px;
+            margin: 15px 0;
+            text-align: center;
+            display: none;
+            border: 1px solid #0088ff;
+            box-shadow: 0 2px 10px rgba(0, 100, 255, 0.4);
+            font-weight: 600;
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            background: rgba(0, 30, 60, 0.3);
+            padding: 8px;
+            border-radius: 3px;
+            border: 1px solid #0066cc;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 10px 8px;
+            background: rgba(0, 50, 100, 0.4);
+            border: 1px solid #0066cc;
+            color: #66ccff;
+            cursor: pointer;
+            border-radius: 2px;
+            text-align: center;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            border-color: #00ffff;
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+        }
+
+        .mode-btn.crime {
+            background: rgba(0, 50, 100, 0.4);
+            border-color: #0066cc;
+        }
+        
+        .mode-btn.crime.active {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            border-color: #00ffff;
+        }
+        
+        .gang-tooltip {
+            position: absolute;
+            background: linear-gradient(135deg, #0a0f1a 0%, #151a2d 100%);
+            border: 2px solid #0066cc;
+            border-radius: 5px;
+            padding: 20px;
+            z-index: 100;
+            width: 380px;
+            max-width: 80vw;
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.4);
+            display: none;
+        }
+        
+        .gang-tooltip::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            pointer-events: none;
+            border-radius: 3px;
+        }
+        
+        .gang-tooltip h3 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #0066cc;
+            padding-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .gang-tooltip p {
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .gang-tooltip .info-label {
+            color: #66ccff;
+            font-weight: bold;
+            display: inline-block;
+            width: 140px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .gang-tooltip .info-value {
+            color: #00ffff;
+            font-weight: 500;
+        }
+        
+        .gang-tooltip .button {
+            margin: 5px 0;
+            padding: 10px 15px;
+            font-size: 0.85rem;
+        }
+        
+        .tooltip-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .tooltip-buttons .button {
+            flex: 1;
+            margin: 0;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+        
+        .delete-mode .territory {
+            border: 2px solid #ff4444 !important;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5) !important;
+        }
+        
+        .delete-mode .territory:hover {
+            border-color: #ff6666 !important;
+            box-shadow: 0 0 20px rgba(255, 100, 100, 0.7) !important;
+        }
+
+        .crime-mode .crime-marker {
+            border: 2px solid #ff4444 !important;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7) !important;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #66ccff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .description-container {
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(0, 30, 60, 0.4);
+            padding: 10px;
+            border-radius: 3px;
+            border: 1px solid #0066cc;
+            margin: 8px 0;
+        }
+
+        .description-text {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+            color: #aaddff;
+            font-size: 0.85rem;
+        }
+
+        .status-bar {
+            background: rgba(0, 50, 100, 0.4);
+            border-top: 1px solid #0066cc;
+            padding: 8px 15px;
+            font-size: 0.75rem;
+            color: #66aaff;
+            text-align: center;
+            margin-top: 20px;
+            border-radius: 0 0 3px 3px;
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(90deg, rgba(0, 100, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(0, 100, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* Индикатор сохранения */
+        .save-indicator {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #003300;
+            border: 1px solid #00ff00;
+            padding: 10px 15px;
+            border-radius: 3px;
+            z-index: 1000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Стили для преступлений */
+        .crime-tooltip {
+            position: absolute;
+            background: linear-gradient(135deg, #0a0f1a 0%, #151a2d 100%);
+            border: 2px solid #0066cc;
+            border-radius: 5px;
+            padding: 20px;
+            z-index: 100;
+            width: 380px;
+            max-width: 80vw;
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.4);
+            display: none;
+        }
+        
+        .crime-tooltip::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            pointer-events: none;
+            border-radius: 3px;
+        }
+        
+        .crime-tooltip h3 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #0066cc;
+            padding-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .crime-controls {
+            display: flex;
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .crime-controls .button {
+            flex: 1;
+            margin: 0;
+        }
+
+        .territory-controls {
+            margin: 15px 0;
+        }
+
+        /* Добавляем стили для новых кнопок */
+        .import-export-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 30, 60, 0.3);
+            border: 1px solid #0066cc;
+            border-radius: 3px;
+        }
+        
+        .import-export-controls h3 {
+            color: #00ffff;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+        
+        .import-export-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .import-export-buttons .button {
+            flex: 1;
+            margin: 0;
+            padding: 10px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .button-export {
+            background: linear-gradient(135deg, #008833 0%, #006622 100%);
+            border-color: #00cc55;
+        }
+        
+        .button-export:hover {
+            background: linear-gradient(135deg, #00aa44 0%, #008833 100%);
+        }
+        
+        .button-import {
+            background: linear-gradient(135deg, #cc6633 0%, #994422 100%);
+            border-color: #ff8844;
+        }
+        
+        .button-import:hover {
+            background: linear-gradient(135deg, #ff8844 0%, #cc6633 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Экран загрузки и авторизации -->
+    <div id="loading-screen">
+        <div class="scan-line-login"></div>
+        <div class="login-container">
+            <div class="login-title">Авторизация в базу данных криминальных группировок полицейского департамента Сан Фиерро</div>
+            <div class="password-field" id="password-display"><span class="typing-cursor"></span></div>
+            <div class="loading-dots" style="display: none;" id="loading-dots">
+                <span>.</span><span>.</span><span>.</span>
+            </div>
+            <div class="welcome-message" id="welcome-message">Рады вас вновь видеть на службе!</div>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div class="scan-line"></div>
+    <div class="container" id="main-interface">
+        <div class="sidebar">
+            <div class="header">
+                <h1>Полицейская база данных</h1>
+                <div class="subtitle">Карта криминальных группировок Сан Фиерро</div>
+            </div>
+            
+            <div class="drawing-status" id="drawing-status">
+                ⚠️ РЕЖИМ ВЫДЕЛЕНИЯ: Кликните и протяните для создания территории
+            </div>
+
+            <div class="crime-status" id="crime-status">
+                🔍 РЕЖИМ ОТМЕТКИ ПРЕСТУПЛЕНИЙ: Кликните на карту для размещения маркера
+            </div>
+            
+            <div class="mode-selector">
+                <div class="mode-btn active" id="mode-new">Новая банда</div>
+                <div class="mode-btn" id="mode-add">Добавить территорию</div>
+                <div class="mode-btn" id="mode-delete">Удалить</div>
+                <div class="mode-btn crime" id="mode-crime">Преступления</div>
+            </div>
+            
+            <div class="color-legend">
+                <h2>Зарегистрированные группировки</h2>
+                <div id="legend-container">
+                    <div class="legend-empty">Нет зарегистрированных группировок</div>
+                </div>
+            </div>
+            
+            <!-- Элементы управления для режима территорий -->
+            <div id="territory-controls">
+                <h2 id="mode-title">Добавить новую группировку</h2>
+                <input type="text" id="gang-name" class="color-input" placeholder="Название группировки">
+                <input type="color" id="gang-color" class="color-input" value="#ff4444">
+                <button id="add-territory" class="button">🚨 Начать выделение территории</button>
+                <button id="cancel-drawing" class="button button-secondary" style="display: none;">❌ Отменить выделение</button>
+            </div>
+            
+            <!-- Элементы управления для режима преступлений -->
+            <div id="crime-controls" style="display: none;">
+                <h2>Управление преступлениями</h2>
+                <div class="crime-controls">
+                    <button id="add-crime" class="button button-crime">📍 Разместить маркер</button>
+                    <button id="delete-crime-mode" class="button button-danger">🗑️ Удалить преступления</button>
+                </div>
+                <button id="cancel-crime" class="button button-secondary" style="display: none;">❌ Отменить размещение</button>
+            </div>
+            
+            <!-- НОВЫЙ БЛОК: Управление импортом/экспортом -->
+            <div class="import-export-controls">
+                <h3>Резервное копирование данных</h3>
+                <div class="import-export-buttons">
+                    <button id="export-data" class="button button-export">💾 Сохранить на ПК</button>
+                    <button id="import-data" class="button button-import">📁 Загрузить с ПК</button>
+                </div>
+                <input type="file" id="file-input" accept=".txt,.json" style="display: none;">
+            </div>
+            
+            <div class="status-bar">
+                СИСТЕМА АКТИВНА | ДОСТУП: УРОВЕНЬ 4 | САН ФИЕРРО PD
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div class="grid-overlay"></div>
+            <canvas id="map"></canvas>
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-in">+</button>
+                <button class="zoom-btn" id="zoom-out">-</button>
+                <button class="zoom-btn" id="reset-view">⟲</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Всплывающее окно с информацией о банде -->
+    <div class="gang-tooltip" id="gang-tooltip">
+        <h3 id="tooltip-title">НАЗВАНИЕ ГРУППИРОВКИ</h3>
+        <p><span class="info-label">Лидер:</span> <span class="info-value" id="tooltip-leader-value">НЕ УСТАНОВЛЕН</span></p>
+        <p><span class="info-label">Членов:</span> <span class="info-value" id="tooltip-members-value">0</span></p>
+        <p><span class="info-label">Описание:</span></p>
+        <div class="description-container">
+            <div class="description-text" id="tooltip-description-value">ИНФОРМАЦИЯ ОТСУТСТВУЕТ</div>
+        </div>
+        <div class="tooltip-buttons">
+            <button id="tooltip-edit" class="button">✏️ Редактировать</button>
+            <button id="tooltip-close" class="button button-secondary">❌ Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Всплывающее окно с информацией о преступлении -->
+    <div class="crime-tooltip" id="crime-tooltip">
+        <h3 id="crime-tooltip-title">МЕСТО ПРЕСТУПЛЕНИЯ</h3>
+        <p><span class="info-label">Заголовок:</span> <span class="info-value" id="crime-tooltip-title-value">НЕ УСТАНОВЛЕН</span></p>
+        <p><span class="info-label">Описание:</span></p>
+        <div class="description-container">
+            <div class="description-text" id="crime-tooltip-description-value">ИНФОРМАЦИЯ ОТСУТСТВУЕТ</div>
+        </div>
+        <div class="tooltip-buttons">
+            <button id="crime-tooltip-edit" class="button">✏️ Редактировать</button>
+            <button id="crime-tooltip-delete" class="button button-danger">🗑️ Удалить</button>
+            <button id="crime-tooltip-close" class="button button-secondary">❌ Закрыть</button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для редактирования банды -->
+    <div class="modal" id="info-modal">
+        <div class="modal-content">
+            <h2>📋 РЕДАКТИРОВАНИЕ ДОСЬЕ</h2>
+            
+            <div class="form-group">
+                <label for="modal-gang-name">Название группировки:</label>
+                <input type="text" id="modal-gang-name" class="color-input" placeholder="ВВЕДИТЕ НАЗВАНИЕ">
+            </div>
+            
+            <div class="form-group">
+                <label for="modal-gang-leader">Известный лидер:</label>
+                <input type="text" id="modal-gang-leader" class="color-input" placeholder="ВВЕДИТЕ ИМЯ ЛИДЕРА">
+            </div>
+            
+            <div class="form-group">
+                <label for="modal-gang-members">Приблизительная численность:</label>
+                <input type="number" id="modal-gang-members" class="color-input" placeholder="КОЛИЧЕСТВО ЧЛЕНОВ">
+            </div>
+            
+            <div class="form-group">
+                <label for="modal-gang-description">Дополнительная информация:</label>
+                <textarea id="modal-gang-description" placeholder="ОПИСАНИЕ ДЕЯТЕЛЬНОСТИ, ИСТОРИЯ, ОСОБЫЕ ПРИМЕТЫ..."></textarea>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="save-info" class="button">💾 СОХРАНИТЬ</button>
+                <button id="delete-territory" class="button button-danger">🗑️ УДАЛИТЬ ВСЕ</button>
+                <button id="cancel-edit" class="button button-secondary">❌ ОТМЕНА</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для редактирования преступления -->
+    <div class="modal" id="crime-modal">
+        <div class="modal-content">
+            <h2>📋 РЕДАКТИРОВАНИЕ ДОСЬЕ ПРЕСТУПЛЕНИЯ</h2>
+            
+            <div class="form-group">
+                <label for="modal-crime-title">Заголовок преступления:</label>
+                <input type="text" id="modal-crime-title" class="color-input" placeholder="ВВЕДИТЕ ЗАГОЛОВОК">
+            </div>
+            
+            <div class="form-group">
+                <label for="modal-crime-description">Описание преступления:</label>
+                <textarea id="modal-crime-description" placeholder="ОПИШИТЕ ПОДРОБНОСТИ ПРЕСТУПЛЕНИЯ..."></textarea>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="save-crime-info" class="button">💾 СОХРАНИТЬ</button>
+                <button id="delete-current-crime" class="button button-danger">🗑️ УДАЛИТЬ</button>
+                <button id="cancel-crime-edit" class="button button-secondary">❌ ОТМЕНА</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Индикатор сохранения -->
+    <div id="save-indicator" class="save-indicator">
+        Данные сохранены в облако ✓
+    </div>
+
+<script>
+    // Конфигурация Supabase
+    const SUPABASE_URL = 'https://yyjroniqdixhudekffea.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_pj9itRH_90lbavZR6pXsng_6HBeksv0';
+    
+    // Создаем клиент Supabase правильно
+    // Используем другое имя переменной, чтобы избежать конфликта
+    const supabaseClient = (() => {
+        try {
+            // Проверяем, загрузилась ли библиотека Supabase
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                console.log('✅ Создаем клиент Supabase...');
+                const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('✅ Клиент Supabase создан успешно');
+                return client;
+            } else {
+                console.error('❌ Библиотека Supabase не загрузилась или не имеет метода createClient');
+                console.log('Доступные свойства в window.supabase:', Object.keys(window.supabase || {}));
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Ошибка при создании клиента Supabase:', error);
+            return null;
+        }
+    })();
+
+    // Проверяем создание клиента
+    if (!supabaseClient) {
+        console.error('Не удалось создать клиент Supabase');
+        alert('⚠️ Внимание: Не удалось подключиться к облачной базе данных. Данные будут сохраняться только локально. Проверьте подключение к интернету.');
+    } else {
+        console.log('✅ Supabase клиент готов к работе');
+    }
+
+    // Глобальные переменные
+    let territories = [];
+    let crimes = [];
+
+    // Загрузка изображения карты Сан Фиерро
+    const mapImage = new Image();
+    mapImage.crossOrigin = "anonymous";
+    mapImage.src = 'https://i.imgur.com/VU8ljOJ.png';
+
+    // Загрузка изображения маркера преступления
+    const crimeMarkerImage = new Image();
+    crimeMarkerImage.crossOrigin = "anonymous";
+    crimeMarkerImage.src = 'https://i.imgur.com/8OeUOuE.png';
+
+    // Переменные для карты
+    let canvas, ctx;
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let lastX, lastY;
+    let isDrawing = false;
+    let isPlacingCrime = false;
+    let isDeletingCrime = false;
+    let startX, startY;
+    let currentTerritory = null;
+    let selectedTerritory = null;
+    let selectedGang = null;
+    let selectedCrime = null;
+    let mode = 'new';
+
+    // Функция для подсчета уникальных банд из импортированных данных
+    function getUniqueGangsCountFromData(territoriesData) {
+        const gangNames = new Set();
+        territoriesData.forEach(territory => {
+            gangNames.add(territory.name);
+        });
+        return gangNames.size;
+    }
+
+    // Функция для подсчета уникальных банд из текущих данных
+    function getUniqueGangsCount() {
+        const gangNames = new Set();
+        territories.forEach(territory => {
+            gangNames.add(territory.name);
+        });
+        return gangNames.size;
+    }
+
+    // НОВЫЕ ФУНКЦИИ ДЛЯ ЭКСПОРТА/ИМПОРТА
+    function exportData() {
+        const data = {
+            territories: territories,
+            crimes: crimes,
+            exportDate: new Date().toISOString(),
+            version: "1.0",
+            description: "Экспорт данных полицейской базы криминальных группировок Сан Фиерро"
+        };
+        
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `police_database_export_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Показываем уведомление
+        const indicator = document.getElementById('save-indicator');
+        indicator.innerHTML = `
+            💾 Данные экспортированы на ПК!<br>
+            🎯 Банд: <strong>${getUniqueGangsCount()}</strong><br> 
+            🗺️ Территорий: <strong>${territories.length}</strong><br>
+            🔍 Преступлений: <strong>${crimes.length}</strong>
+        `;
+        indicator.style.display = 'block';
+        indicator.style.background = '#003366';
+        indicator.style.borderColor = '#0066cc';
+        
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 4000);
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Проверка размера файла (максимум 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('❌ Файл слишком большой. Максимальный размер: 5MB');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                // Проверяем структуру данных
+                if (!importedData.territories || !Array.isArray(importedData.territories)) {
+                    throw new Error("Неверный формат: territories должен быть массивом");
+                }
+
+                if (!importedData.crimes || !Array.isArray(importedData.crimes)) {
+                    throw new Error("Неверный формат: crimes должен быть массивом");
+                }
+
+                // Проверяем структуру территории
+                if (importedData.territories.length > 0) {
+                    const sampleTerritory = importedData.territories[0];
+                    if (!sampleTerritory.x || !sampleTerritory.y || !sampleTerritory.name) {
+                        throw new Error("Неверный формат территории: отсутствуют обязательные поля");
+                    }
+                }
+                
+                if (confirm(`Загрузить данные из файла?\n\nБанд: ${getUniqueGangsCountFromData(importedData.territories)}\nТерриторий: ${importedData.territories.length}\nПреступлений: ${importedData.crimes.length}\n\nТекущие данные будут заменены.`)) {
+                    territories = importedData.territories;
+                    crimes = importedData.crimes;
+                    
+                    drawMap();
+                    updateLegend();
+                    saveData();
+                    
+                    alert(`✅ Данные успешно загружены!\n\nБанд: ${getUniqueGangsCount()}\nТерриторий: ${territories.length}\nПреступлений: ${crimes.length}`);
+                }
+            } catch (error) {
+                console.error('Ошибка импорта:', error);
+                alert('❌ Ошибка загрузки файла. Убедитесь, что файл имеет правильный формат.');
+            }
+        };
+        reader.readAsText(file);
+        
+        // Сбрасываем значение input, чтобы можно было загрузить тот же файл снова
+        event.target.value = '';
+    }
+
+    // Функции для работы с Supabase
+    async function saveToSupabase() {
+        try {
+            if (!supabaseClient) {
+                console.error('Supabase клиент не создан');
+                throw new Error('Supabase клиент не создан');
+            }
+            
+            console.log('💾 Сохранение данных в Supabase...');
+            
+            const { data, error } = await supabaseClient
+                .from('gang_territories')
+                .upsert({ 
+                    id: 1, 
+                    territories: territories,
+                    crimes: crimes,
+                    updated_at: new Date().toISOString()
+                })
+                .select();
+
+            if (error) {
+                console.error('❌ Ошибка Supabase:', error);
+                throw error;
+            }
+            
+            console.log('✅ Данные успешно сохранены в Supabase:', data);
+            return data;
+            
+        } catch (error) {
+            console.error('❌ Ошибка сохранения в Supabase:', error);
+            throw error;
+        }
+    }
+
+    async function loadFromSupabase() {
+        try {
+            if (!supabaseClient) {
+                console.error('Supabase клиент не создан');
+                return { territories: [], crimes: [] };
+            }
+            
+            console.log('📥 Загрузка данных из Supabase...');
+            
+            const { data, error } = await supabaseClient
+                .from('gang_territories')
+                .select('territories, crimes')
+                .eq('id', 1)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    console.log('📭 В Supabase нет данных, создадим при первом сохранении');
+                    return { territories: [], crimes: [] };
+                }
+                console.error('❌ Ошибка Supabase:', error);
+                throw error;
+            }
+            
+            console.log('✅ Данные загружены из Supabase:', data?.territories?.length || 0, 'территорий', data?.crimes?.length || 0, 'преступлений');
+            return {
+                territories: data?.territories || [],
+                crimes: data?.crimes || []
+            };
+            
+        } catch (error) {
+            console.error('❌ Ошибка загрузки из Supabase:', error);
+            return { territories: [], crimes: [] };
+        }
+    }
+
+    async function initializeSupabaseTable() {
+        try {
+            if (!supabaseClient) {
+                console.error('Supabase клиент не создан');
+                return false;
+            }
+            
+            console.log('🔧 Инициализация таблицы в Supabase...');
+            
+            const { error } = await supabaseClient
+                .from('gang_territories')
+                .upsert({ 
+                    id: 1, 
+                    territories: [],
+                    crimes: [],
+                    updated_at: new Date().toISOString()
+                });
+
+            if (error && error.code !== '23505') {
+                console.error('❌ Ошибка инициализации таблицы:', error);
+                return false;
+            }
+            
+            console.log('✅ Таблица в Supabase готова к работе');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации Supabase:', error);
+            return false;
+        }
+    }
+
+    async function saveData() {
+        try {
+            await saveToSupabase();
+            showSaveNotification();
+        } catch (error) {
+            console.error('❌ Ошибка сохранения:', error);
+            showErrorNotification();
+        }
+    }
+
+    function showSaveNotification() {
+        const indicator = document.getElementById('save-indicator');
+        const gangCount = getUniqueGangsCount();
+        
+        indicator.innerHTML = `
+            ✅ Данные сохранены в облако!<br>
+            🎯 Банд: <strong>${gangCount}</strong><br> 
+            🗺️ Территорий: <strong>${territories.length}</strong><br>
+            🔍 Преступлений: <strong>${crimes.length}</strong><br>
+            ⚡ Автосинхронизация включена
+        `;
+        indicator.style.display = 'block';
+        indicator.style.background = '#003300';
+        indicator.style.borderColor = '#00ff00';
+        
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 4000);
+    }
+
+    function showErrorNotification() {
+        const indicator = document.getElementById('save-indicator');
+        
+        indicator.innerHTML = `
+            ❌ Ошибка сохранения в облако<br>
+            🔄 Попробуйте еще раз
+        `;
+        indicator.style.display = 'block';
+        indicator.style.background = '#330000';
+        indicator.style.borderColor = '#ff0000';
+        
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 4000);
+    }
+
+    async function loadData() {
+        try {
+            const data = await loadFromSupabase();
+            territories = data.territories;
+            crimes = data.crimes;
+            
+            console.log('Загружено территорий:', territories.length);
+            territories.forEach((t, i) => {
+                console.log(`Территория ${i}:`, t.name, 'лидер:', t.leader, 'участников:', t.members);
+            });
+            
+            if (territories.length === 0 && crimes.length === 0) {
+                await initializeSupabaseTable();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Ошибка загрузки:', error);
+            territories = [];
+            crimes = [];
+            return false;
+        }
+    }
+
+    // Анимация ввода пароля
+    async function startLoginAnimation() {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const password = "••••••••••";
+        let currentPassword = "";
+        
+        for (let i = 0; i < password.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
+            currentPassword += password[i];
+            document.getElementById('password-display').innerHTML = currentPassword + '<span class="typing-cursor"></span>';
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        document.getElementById('password-display').innerHTML = password;
+        document.getElementById('loading-dots').style.display = 'block';
+        
+        await loadData();
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        document.getElementById('welcome-message').style.opacity = '1';
+        document.getElementById('welcome-message').style.transition = 'opacity 0.5s';
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        document.getElementById('loading-screen').style.transition = 'transform 0.8s ease-in-out';
+        document.getElementById('loading-screen').style.transform = 'translateY(-100%)';
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        document.getElementById('main-interface').style.opacity = '1';
+        document.getElementById('main-interface').style.transform = 'translateY(0)';
+        document.getElementById('main-interface').style.transition = 'opacity 0.5s, transform 0.5s';
+        
+        initMap();
+        setupEventListeners();
+    }
+
+    function initMap() {
+        canvas = document.getElementById('map');
+        ctx = canvas.getContext('2d');
+        
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+        
+        mapImage.onload = function() {
+            drawMap();
+        };
+        
+        crimeMarkerImage.onload = function() {
+            drawMap();
+        };
+        
+        if (mapImage.complete) {
+            drawMap();
+        }
+        
+        updateLegend();
+    }
+
+    function drawMap() {
+        if (!ctx) return;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+        
+        ctx.drawImage(mapImage, 0, 0, 800, 600);
+        
+        // Рисуем территории
+        territories.forEach(territory => {
+            ctx.fillStyle = territory.color;
+            ctx.globalAlpha = 0.5;
+            ctx.fillRect(territory.x, territory.y, territory.width, territory.height);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = territory.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(territory.x, territory.y, territory.width, territory.height);
+            
+            // ОТОБРАЖАЕМ НАЗВАНИЕ ТОЛЬКО ЕСЛИ ЭТО ВЫБРАННАЯ ТЕРРИТОРИЯ
+            if (selectedTerritory && territory === selectedTerritory) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                    territory.name, 
+                    territory.x + territory.width / 2, 
+                    territory.y + territory.height / 2
+                );
+                
+                // Добавляем фон для лучшей читаемости
+                const textWidth = ctx.measureText(territory.name).width;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(
+                    territory.x + territory.width / 2 - textWidth / 2 - 5,
+                    territory.y + territory.height / 2 - 10,
+                    textWidth + 10,
+                    20
+                );
+                
+                // Снова рисуем текст поверх фона
+                ctx.fillStyle = '#fff';
+                ctx.fillText(
+                    territory.name, 
+                    territory.x + territory.width / 2, 
+                    territory.y + territory.height / 2
+                );
+            }
+        });
+        
+        // Рисуем маркеры преступлений
+        crimes.forEach(crime => {
+            if (crimeMarkerImage.complete) {
+                ctx.drawImage(crimeMarkerImage, crime.x - 8, crime.y - 10, 10, 10);
+            } else {
+                // Fallback - красный кружок если изображение не загрузилось
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(crime.x, crime.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        });
+        
+        // Рисуем текущую выделяемую территорию
+        if (currentTerritory) {
+            ctx.fillStyle = currentTerritory.color;
+            ctx.globalAlpha = 0.3;
+            ctx.fillRect(
+                currentTerritory.x, 
+                currentTerritory.y, 
+                currentTerritory.width, 
+                currentTerritory.height
+            );
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = currentTerritory.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                currentTerritory.x, 
+                currentTerritory.y, 
+                currentTerritory.width, 
+                currentTerritory.height
+            );
+        }
+        
+        ctx.restore();
+    }
+
+    function updateLegend() {
+        const legendContainer = document.getElementById('legend-container');
+        
+        if (territories.length === 0) {
+            legendContainer.innerHTML = '<div class="legend-empty">Нет зарегистрированных группировок</div>';
+            return;
+        }
+        
+        const uniqueGangs = [];
+        const gangNames = new Set();
+        
+        territories.forEach(territory => {
+            if (!gangNames.has(territory.name)) {
+                gangNames.add(territory.name);
+                uniqueGangs.push({
+                    name: territory.name,
+                    color: territory.color,
+                    leader: territory.leader,
+                    members: territory.members,
+                    description: territory.description
+                });
+            }
+        });
+        
+        legendContainer.innerHTML = '';
+        
+        uniqueGangs.forEach(gang => {
+            const colorItem = document.createElement('div');
+            colorItem.className = 'color-item';
+            if (selectedGang && selectedGang.name === gang.name) {
+                colorItem.classList.add('selected');
+            }
+            
+            const infoHtml = `
+                <div style="font-size: 0.7rem; margin-top: 4px; color: #88ccff;">
+                    ${gang.leader ? `👑 ${gang.leader}` : '👑 Неизвестно'}
+                    ${gang.members ? ` | 👥 ${gang.members}` : ' | 👥 0'}
+                </div>
+            `;
+            
+            colorItem.innerHTML = `
+                <div class="color-box" style="background-color: ${gang.color};"></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: bold;">${gang.name}</div>
+                    ${infoHtml}
+                </div>
+            `;
+            colorItem.addEventListener('click', () => selectGang(gang));
+            legendContainer.appendChild(colorItem);
+        });
+    }
+
+    function selectGang(gang) {
+        if (mode === 'delete' || mode === 'crime') return;
+        
+        // НАХОДИМ ПЕРВУЮ ТЕРРИТОРИЮ ЭТОЙ БАНДЫ С ПОЛНОЙ ИНФОРМАЦИЕЙ
+        const fullGangInfo = territories.find(t => t.name === gang.name);
+        selectedGang = fullGangInfo ? { ...fullGangInfo } : gang;
+        
+        updateLegend();
+        
+        if (mode === 'add') {
+            document.getElementById('gang-name').value = selectedGang.name;
+            document.getElementById('gang-color').value = selectedGang.color;
+            document.getElementById('gang-name').disabled = true;
+            document.getElementById('gang-color').disabled = true;
+        }
+    }
+
+    function setMode(newMode) {
+        mode = newMode;
+        
+        // Обновляем активные кнопки режимов
+        document.getElementById('mode-new').classList.toggle('active', mode === 'new');
+        document.getElementById('mode-add').classList.toggle('active', mode === 'add');
+        document.getElementById('mode-delete').classList.toggle('active', mode === 'delete');
+        document.getElementById('mode-crime').classList.toggle('active', mode === 'crime');
+        
+        // Обновляем классы body для стилизации
+        document.body.classList.toggle('delete-mode', mode === 'delete');
+        document.body.classList.toggle('crime-mode', mode === 'crime');
+        
+        // Показываем/скрываем соответствующие элементы управления
+        const crimeControls = document.getElementById('crime-controls');
+        const territoryControls = document.getElementById('territory-controls');
+        
+        if (mode === 'new' || mode === 'add') {
+            document.getElementById('mode-title').textContent = mode === 'new' ? 'Добавить новую группировку' : 'Добавить территорию к группировке';
+            territoryControls.style.display = 'block';
+            crimeControls.style.display = 'none';
+            document.getElementById('gang-name').disabled = mode === 'add';
+            document.getElementById('gang-color').disabled = mode === 'add';
+            canvas.style.cursor = 'crosshair';
+        } else if (mode === 'crime') {
+            document.getElementById('mode-title').textContent = 'Режим отметки преступлений';
+            territoryControls.style.display = 'none';
+            crimeControls.style.display = 'block';
+            canvas.style.cursor = 'crosshair';
+            isDeletingCrime = false;
+        } else {
+            document.getElementById('mode-title').textContent = 'Режим удаления территорий';
+            territoryControls.style.display = 'block';
+            crimeControls.style.display = 'none';
+            canvas.style.cursor = 'not-allowed';
+        }
+        
+        // Сбрасываем состояния
+        isDrawing = false;
+        isPlacingCrime = false;
+        isDeletingCrime = false;
+        currentTerritory = null;
+        selectedTerritory = null; // ДОБАВЛЕНО: сбрасываем выбранную территорию
+        document.getElementById('add-territory').disabled = false;
+        document.getElementById('cancel-drawing').style.display = 'none';
+        document.getElementById('cancel-crime').style.display = 'none';
+        document.getElementById('crime-status').style.display = 'none';
+        document.getElementById('drawing-status').style.display = 'none';
+        document.getElementById('add-crime').disabled = false;
+        document.getElementById('delete-crime-mode').disabled = false;
+        
+        hideTooltip();
+        hideCrimeTooltip();
+        drawMap();
+    }
+
+    function showTooltip(territory, x, y) {
+        document.getElementById('tooltip-title').textContent = territory.name;
+        document.getElementById('tooltip-leader-value').textContent = territory.leader || 'НЕ УСТАНОВЛЕН';
+        document.getElementById('tooltip-members-value').textContent = territory.members || '0';
+        document.getElementById('tooltip-description-value').textContent = territory.description || 'ИНФОРМАЦИЯ ОТСУТСТВУЕТ';
+        
+        const gangTooltip = document.getElementById('gang-tooltip');
+        const tooltipWidth = gangTooltip.offsetWidth;
+        const tooltipHeight = gangTooltip.offsetHeight;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        let posX = x + 15;
+        let posY = y - tooltipHeight / 2;
+        
+        if (posX + tooltipWidth > windowWidth) {
+            posX = x - tooltipWidth - 15;
+        }
+        
+        if (posY < 0) {
+            posY = 10;
+        } else if (posY + tooltipHeight > windowHeight) {
+            posY = windowHeight - tooltipHeight - 10;
+        }
+        
+        gangTooltip.style.left = posX + 'px';
+        gangTooltip.style.top = posY + 'px';
+        gangTooltip.style.display = 'block';
+        
+        selectedTerritory = territory;
+        
+        drawMap();
+    }
+
+    function hideTooltip() {
+        document.getElementById('gang-tooltip').style.display = 'none';
+        selectedTerritory = null;
+        drawMap();
+    }
+
+    function showCrimeTooltip(crime, x, y) {
+        document.getElementById('crime-tooltip-title-value').textContent = crime.title || 'НЕ УСТАНОВЛЕН';
+        document.getElementById('crime-tooltip-description-value').textContent = crime.description || 'ИНФОРМАЦИЯ ОТСУТСТВУЕТ';
+        
+        const crimeTooltip = document.getElementById('crime-tooltip');
+        const tooltipWidth = crimeTooltip.offsetWidth;
+        const tooltipHeight = crimeTooltip.offsetHeight;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        let posX = x + 15;
+        let posY = y - tooltipHeight / 2;
+        
+        if (posX + tooltipWidth > windowWidth) {
+            posX = x - tooltipWidth - 15;
+        }
+        
+        if (posY < 0) {
+            posY = 10;
+        } else if (posY + tooltipHeight > windowHeight) {
+            posY = windowHeight - tooltipHeight - 10;
+        }
+        
+        crimeTooltip.style.left = posX + 'px';
+        crimeTooltip.style.top = posY + 'px';
+        crimeTooltip.style.display = 'block';
+        
+        selectedCrime = crime;
+    }
+
+    function hideCrimeTooltip() {
+        document.getElementById('crime-tooltip').style.display = 'none';
+        selectedCrime = null;
+    }
+
+    function deleteCrime(crime) {
+        const index = crimes.indexOf(crime);
+        if (index > -1) {
+            crimes.splice(index, 1);
+            drawMap();
+            hideCrimeTooltip();
+            selectedCrime = null;
+            saveData();
+        }
+    }
+
+    function saveCrimeInfo() {
+        if (!selectedCrime) {
+            alert('Ошибка: не выбрано преступление для редактирования');
+            return;
+        }
+        
+        const newTitle = document.getElementById('modal-crime-title').value.trim();
+        if (!newTitle) {
+            alert('Пожалуйста, введите заголовок преступления');
+            return;
+        }
+        
+        const newDescription = document.getElementById('modal-crime-description').value.trim();
+        
+        selectedCrime.title = newTitle;
+        selectedCrime.description = newDescription;
+        
+        drawMap();
+        saveData();
+        document.getElementById('crime-modal').style.display = 'none';
+        
+        alert('✅ Информация о преступлении успешно сохранена в облако!');
+    }
+
+    function openCrimeEditModal(crime) {
+        if (!crime) {
+            console.error('Преступление не определено');
+            return;
+        }
+        
+        document.getElementById('modal-crime-title').value = crime.title || '';
+        document.getElementById('modal-crime-description').value = crime.description || '';
+        
+        selectedCrime = crime;
+        document.getElementById('crime-modal').style.display = 'flex';
+        document.getElementById('crime-tooltip').style.display = 'none';
+    }
+
+    function startCrimePlacement() {
+        isPlacingCrime = true;
+        isDeletingCrime = false;
+        canvas.style.cursor = `url('https://i.imgur.com/8OeUOuE.png') 12 24, crosshair`;
+        document.getElementById('crime-status').style.display = 'block';
+        document.getElementById('cancel-crime').style.display = 'block';
+        document.getElementById('add-crime').disabled = true;
+        document.getElementById('delete-crime-mode').disabled = true;
+    }
+
+    function startCrimeDeletion() {
+        isDeletingCrime = true;
+        isPlacingCrime = false;
+        canvas.style.cursor = 'not-allowed';
+        document.getElementById('crime-status').style.display = 'block';
+        document.getElementById('crime-status').textContent = '🗑️ РЕЖИМ УДАЛЕНИЯ ПРЕСТУПЛЕНИЙ: Кликните на маркер для удаления';
+        document.getElementById('cancel-crime').style.display = 'block';
+        document.getElementById('add-crime').disabled = true;
+        document.getElementById('delete-crime-mode').disabled = true;
+    }
+
+    function placeCrimeMarker(e) {
+        if (!isPlacingCrime) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+        
+        const newCrime = {
+            x: x,
+            y: y,
+            title: '',
+            description: '',
+            date: new Date().toLocaleDateString('ru-RU')
+        };
+        
+        crimes.push(newCrime);
+        drawMap();
+        
+        selectedCrime = newCrime;
+        openCrimeEditModal(newCrime);
+        
+        cancelCrimePlacement();
+        saveData();
+    }
+
+    function cancelCrimePlacement() {
+        isPlacingCrime = false;
+        isDeletingCrime = false;
+        canvas.style.cursor = 'crosshair';
+        document.getElementById('crime-status').style.display = 'none';
+        document.getElementById('cancel-crime').style.display = 'none';
+        document.getElementById('add-crime').disabled = false;
+        document.getElementById('delete-crime-mode').disabled = false;
+        document.getElementById('crime-status').textContent = '🔍 РЕЖИМ ОТМЕТКИ ПРЕСТУПЛЕНИЙ: Кликните на карту для размещения маркера';
+    }
+
+    function startDrawing() {
+        if (mode !== 'new' && mode !== 'add') return;
+        
+        isDrawing = true;
+        document.getElementById('add-territory').disabled = true;
+        document.getElementById('cancel-drawing').style.display = 'block';
+        document.getElementById('drawing-status').style.display = 'block';
+        canvas.style.cursor = 'crosshair';
+    }
+
+    function handleDrawing(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+        
+        if (!currentTerritory) {
+            // Начало рисования
+            let gangName, gangColor, gangLeader, gangMembers, gangDescription;
+            
+            if (mode === 'new') {
+                gangName = document.getElementById('gang-name').value;
+                gangColor = document.getElementById('gang-color').value;
+                gangLeader = '';
+                gangMembers = 0;
+                gangDescription = '';
+            } else if (mode === 'add') {
+                if (!selectedGang) {
+                    alert('Выберите группировку для добавления территории');
+                    cancelDrawing();
+                    return;
+                }
+                
+                gangName = selectedGang.name;
+                gangColor = selectedGang.color;
+                
+                // ВАЖНО: Берем данные ИЗ selectedGang, который уже содержит полную информацию
+                gangLeader = selectedGang.leader || '';
+                gangMembers = selectedGang.members || 0;
+                gangDescription = selectedGang.description || '';
+                
+                console.log('Добавляем территорию к банде:', {
+                    name: gangName,
+                    leader: gangLeader,
+                    members: gangMembers,
+                    description: gangDescription
+                });
+            } else {
+                alert('Ошибка режима');
+                cancelDrawing();
+                return;
+            }
+            
+            if (!gangName) {
+                alert('Введите название группировки');
+                cancelDrawing();
+                return;
+            }
+            
+            startX = x;
+            startY = y;
+            
+            currentTerritory = {
+                x: x,
+                y: y,
+                width: 0,
+                height: 0,
+                name: gangName,
+                color: gangColor,
+                leader: gangLeader,
+                members: gangMembers,
+                description: gangDescription
+            };
+            
+            console.log('Создана новая территория:', currentTerritory);
+        } else {
+            // Обновление размера территории
+            currentTerritory.width = x - startX;
+            currentTerritory.height = y - startY;
+            drawMap();
+        }
+    }
+
+    function finishDrawing(e) {
+        if (!isDrawing || !currentTerritory) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+        
+        currentTerritory.width = x - startX;
+        currentTerritory.height = y - startY;
+        
+        if (Math.abs(currentTerritory.width) < 10 || Math.abs(currentTerritory.height) < 10) {
+            alert('Территория слишком мала. Создайте область большего размера.');
+            cancelDrawing();
+            return;
+        }
+        
+        // Нормализуем координаты
+        if (currentTerritory.width < 0) {
+            currentTerritory.x += currentTerritory.width;
+            currentTerritory.width = Math.abs(currentTerritory.width);
+        }
+        
+        if (currentTerritory.height < 0) {
+            currentTerritory.y += currentTerritory.height;
+            currentTerritory.height = Math.abs(currentTerritory.height);
+        }
+        
+        console.log('Добавляем территорию в массив:', currentTerritory);
+        territories.push(currentTerritory);
+        currentTerritory = null;
+        isDrawing = false;
+        
+        drawMap();
+        updateLegend();
+        saveData();
+        
+        document.getElementById('add-territory').disabled = false;
+        document.getElementById('cancel-drawing').style.display = 'none';
+        document.getElementById('drawing-status').style.display = 'none';
+    }
+
+    function cancelDrawing() {
+        isDrawing = false;
+        currentTerritory = null;
+        drawMap();
+        document.getElementById('add-territory').disabled = false;
+        document.getElementById('cancel-drawing').style.display = 'none';
+        document.getElementById('drawing-status').style.display = 'none';
+    }
+
+    function deleteTerritory(e) {
+        if (mode !== 'delete') return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+        
+        for (let i = territories.length - 1; i >= 0; i--) {
+            const territory = territories[i];
+            if (x >= territory.x && x <= territory.x + territory.width &&
+                y >= territory.y && y <= territory.y + territory.height) {
+                
+                if (confirm(`Удалить территорию банды "${territory.name}"?`)) {
+                    territories.splice(i, 1);
+                    drawMap();
+                    updateLegend();
+                    saveData();
+                }
+                break;
+            }
+        }
+    }
+
+    function deleteCrimeAtPosition(e) {
+        if (!isDeletingCrime) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+        
+        for (let i = crimes.length - 1; i >= 0; i--) {
+            const crime = crimes[i];
+            const distance = Math.sqrt(Math.pow(x - crime.x, 2) + Math.pow(y - crime.y, 2));
+            if (distance < 12) {
+                if (confirm('Удалить это место преступления?')) {
+                    crimes.splice(i, 1);
+                    drawMap();
+                    saveData();
+                }
+                break;
+            }
+        }
+    }
+
+    // Исправленная логика работы мыши
+    function handleMouseDown(e) {
+        if (isPlacingCrime) {
+            placeCrimeMarker(e);
+            return;
+        }
+        
+        if (isDeletingCrime) {
+            deleteCrimeAtPosition(e);
+            return;
+        }
+        
+        if (mode === 'delete') {
+            deleteTerritory(e);
+            return;
+        }
+        
+        if (e.button === 0) { // Левая кнопка мыши
+            if (isDrawing) {
+                handleDrawing(e);
+            } else {
+                // Начало перетаскивания карты
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            }
+        }
+    }
+
+    function handleMouseMove(e) {
+        if (isDragging) {
+            const deltaX = e.clientX - lastX;
+            const deltaY = e.clientY - lastY;
+            offsetX += deltaX;
+            offsetY += deltaY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            drawMap();
+        } else if (isDrawing && currentTerritory) {
+            handleDrawing(e);
+        } else {
+            // Проверка наведения на маркеры преступлений
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - offsetX) / scale;
+            const y = (e.clientY - rect.top - offsetY) / scale;
+            
+            let foundCrime = false;
+            for (let i = crimes.length - 1; i >= 0; i--) {
+                const crime = crimes[i];
+                const distance = Math.sqrt(Math.pow(x - crime.x, 2) + Math.pow(y - crime.y, 2));
+                if (distance < 12) {
+                    canvas.style.cursor = 'pointer';
+                    foundCrime = true;
+                    break;
+                }
+            }
+            
+            if (!foundCrime) {
+                canvas.style.cursor = mode === 'delete' ? 'not-allowed' : 'crosshair';
+            }
+        }
+    }
+
+    function handleMouseUp(e) {
+        if (isDrawing && e.button === 0) {
+            finishDrawing(e);
+        }
+        if (isDragging) {
+            isDragging = false;
+            canvas.style.cursor = mode === 'delete' ? 'not-allowed' : 'crosshair';
+        }
+    }
+
+    function handleWheel(e) {
+        e.preventDefault();
+        
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const zoomIntensity = 0.1;
+        const wheel = e.deltaY < 0 ? 1 : -1;
+        const zoomFactor = Math.exp(wheel * zoomIntensity);
+        
+        const worldX = (mouseX - offsetX) / scale;
+        const worldY = (mouseY - offsetY) / scale;
+        
+        const newScale = scale * zoomFactor;
+        
+        // Ограничение масштаба
+        if (newScale < 0.1 || newScale > 5) return;
+        
+        scale = newScale;
+        
+        // Корректировка смещения для zoom к курсору
+        offsetX = mouseX - worldX * scale;
+        offsetY = mouseY - worldY * scale;
+        
+        drawMap();
+    }
+
+    function setupEventListeners() {
+        // Исправленные обработчики мыши
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('wheel', handleWheel);
+        
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (mode === 'delete' || isPlacingCrime || isDeletingCrime || isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - offsetX) / scale;
+            const y = (e.clientY - rect.top - offsetY) / scale;
+            
+            // Проверка клика по маркерам преступлений
+            for (let i = crimes.length - 1; i >= 0; i--) {
+                const crime = crimes[i];
+                const distance = Math.sqrt(Math.pow(x - crime.x, 2) + Math.pow(y - crime.y, 2));
+                if (distance < 12) {
+                    showCrimeTooltip(crime, e.clientX, e.clientY);
+                    return;
+                }
+            }
+            
+            // Проверка клика по территориям
+            for (let i = territories.length - 1; i >= 0; i--) {
+                const territory = territories[i];
+                if (x >= territory.x && x <= territory.x + territory.width &&
+                    y >= territory.y && y <= territory.y + territory.height) {
+                    // ЕСЛИ КЛИКАЕМ НА УЖЕ ВЫБРАННУЮ ТЕРРИТОРИЮ - СКРЫВАЕМ ПОДСКАЗКУ
+                    if (selectedTerritory === territory) {
+                        hideTooltip();
+                    } else {
+                        showTooltip(territory, e.clientX, e.clientY);
+                    }
+                    return;
+                }
+            }
+            
+            // ЕСЛИ КЛИКНУЛИ НА ПУСТОЕ МЕСТО - СКРЫВАЕМ ПОДСКАЗКУ
+            hideTooltip();
+        });
+        
+        // Обработчики для кнопок режимов
+        document.getElementById('mode-new').addEventListener('click', () => setMode('new'));
+        document.getElementById('mode-add').addEventListener('click', () => setMode('add'));
+        document.getElementById('mode-delete').addEventListener('click', () => setMode('delete'));
+        document.getElementById('mode-crime').addEventListener('click', () => setMode('crime'));
+        
+        // Обработчики для кнопок управления
+        document.getElementById('add-territory').addEventListener('click', startDrawing);
+        document.getElementById('cancel-drawing').addEventListener('click', cancelDrawing);
+        
+        document.getElementById('add-crime').addEventListener('click', startCrimePlacement);
+        document.getElementById('delete-crime-mode').addEventListener('click', startCrimeDeletion);
+        document.getElementById('cancel-crime').addEventListener('click', cancelCrimePlacement);
+        
+        // ОБРАБОТЧИКИ ДЛЯ ЭКСПОРТА/ИМПОРТА
+        document.getElementById('export-data').addEventListener('click', exportData);
+        document.getElementById('import-data').addEventListener('click', function() {
+            document.getElementById('file-input').click();
+        });
+        document.getElementById('file-input').addEventListener('change', importData);
+        
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            scale *= 1.2;
+            scale = Math.min(5, scale);
+            drawMap();
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            scale /= 1.2;
+            scale = Math.max(0.1, scale);
+            drawMap();
+        });
+        
+        document.getElementById('reset-view').addEventListener('click', () => {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            drawMap();
+        });
+        
+        document.getElementById('crime-tooltip-edit').addEventListener('click', () => {
+            if (selectedCrime) {
+                openCrimeEditModal(selectedCrime);
+            }
+        });
+        
+        document.getElementById('crime-tooltip-delete').addEventListener('click', () => {
+            if (selectedCrime && confirm('Удалить это место преступления?')) {
+                deleteCrime(selectedCrime);
+            }
+        });
+        
+        document.getElementById('crime-tooltip-close').addEventListener('click', hideCrimeTooltip);
+        
+        document.getElementById('save-crime-info').addEventListener('click', saveCrimeInfo);
+        document.getElementById('delete-current-crime').addEventListener('click', function() {
+            if (selectedCrime && confirm('Удалить это место преступления?')) {
+                deleteCrime(selectedCrime);
+                document.getElementById('crime-modal').style.display = 'none';
+            }
+        });
+        document.getElementById('cancel-crime-edit').addEventListener('click', () => {
+            document.getElementById('crime-modal').style.display = 'none';
+        });
+        
+        // Обработчики для модального окна банд
+        document.getElementById('tooltip-edit').addEventListener('click', function() {
+            if (selectedTerritory) {
+                document.getElementById('modal-gang-name').value = selectedTerritory.name || '';
+                document.getElementById('modal-gang-leader').value = selectedTerritory.leader || '';
+                document.getElementById('modal-gang-members').value = selectedTerritory.members || '';
+                document.getElementById('modal-gang-description').value = selectedTerritory.description || '';
+                document.getElementById('info-modal').style.display = 'flex';
+            }
+        });
+        
+        document.getElementById('tooltip-close').addEventListener('click', hideTooltip);
+        
+        document.getElementById('save-info').addEventListener('click', function() {
+            if (!selectedTerritory) return;
+            
+            const newName = document.getElementById('modal-gang-name').value.trim();
+            if (!newName) {
+                alert('Пожалуйста, введите название банды');
+                return;
+            }
+            
+            const newLeader = document.getElementById('modal-gang-leader').value.trim();
+            const newMembers = parseInt(document.getElementById('modal-gang-members').value) || 0;
+            const newDescription = document.getElementById('modal-gang-description').value.trim();
+            
+            const oldName = selectedTerritory.name;
+            
+            territories.forEach(territory => {
+                if (territory.name === oldName) {
+                    territory.name = newName;
+                    territory.leader = newLeader;
+                    territory.members = newMembers;
+                    territory.description = newDescription;
+                }
+            });
+            
+            if (selectedGang && selectedGang.name === oldName) {
+                selectedGang.name = newName;
+                selectedGang.leader = newLeader;
+                selectedGang.members = newMembers;
+                selectedGang.description = newDescription;
+            }
+            
+            updateLegend();
+            drawMap();
+            saveData();
+            
+            document.getElementById('info-modal').style.display = 'none';
+            selectedTerritory = null;
+            
+            alert('✅ Информация о банде успешно сохранена в облако!');
+        });
+        
+        document.getElementById('delete-territory').addEventListener('click', function() {
+            if (selectedTerritory && confirm(`УДАЛИТЬ ВСЕ ТЕРРИТОРИИ БАНДЫ "${selectedTerritory.name}"? Это действие нельзя отменить!`)) {
+                const gangName = selectedTerritory.name;
+                territories = territories.filter(t => t.name !== gangName);
+                
+                updateLegend();
+                drawMap();
+                document.getElementById('info-modal').style.display = 'none';
+                hideTooltip();
+                
+                if (selectedGang && selectedGang.name === gangName) {
+                    selectedGang = null;
+                }
+                
+                saveData();
+                alert(`✅ Все территории банды "${gangName}" удалены из облака!`);
+            }
+        });
+        
+        document.getElementById('cancel-edit').addEventListener('click', function() {
+            document.getElementById('info-modal').style.display = 'none';
+            selectedTerritory = null;
+        });
+        
+        document.getElementById('info-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+                selectedTerritory = null;
+            }
+        });
+        
+        document.getElementById('crime-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+            }
+        });
+
+        // Обработчик изменения размера окна
+        window.addEventListener('resize', initMap);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        startLoginAnimation();
+    });
+</script>
+</body>
+</html>
