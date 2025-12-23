@@ -341,15 +341,6 @@
         .button-danger:hover {
             background: linear-gradient(135deg, #ff4444 0%, #cc3333 100%);
         }
-
-        .button-crime {
-            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
-            border-color: #0088ff;
-        }
-        
-        .button-crime:hover {
-            background: linear-gradient(135deg, #0088ff 0%, #0066cc 100%);
-        }
         
         .territory {
             position: absolute;
@@ -501,19 +492,6 @@
             box-shadow: 0 2px 10px rgba(0, 100, 255, 0.4);
             font-weight: 600;
         }
-
-        .crime-status {
-            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
-            color: white;
-            padding: 12px;
-            border-radius: 3px;
-            margin: 15px 0;
-            text-align: center;
-            display: none;
-            border: 1px solid #0088ff;
-            box-shadow: 0 2px 10px rgba(0, 100, 255, 0.4);
-            font-weight: 600;
-        }
         
         .mode-selector {
             display: flex;
@@ -545,16 +523,6 @@
             border-color: #00ffff;
             color: white;
             box-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
-        }
-
-        .mode-btn.crime {
-            background: rgba(0, 50, 100, 0.4);
-            border-color: #0066cc;
-        }
-        
-        .mode-btn.crime.active {
-            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
-            border-color: #00ffff;
         }
         
         .gang-tooltip {
@@ -640,11 +608,6 @@
         .delete-mode .territory:hover {
             border-color: #ff6666 !important;
             box-shadow: 0 0 20px rgba(255, 100, 100, 0.7) !important;
-        }
-
-        .crime-mode .crime-marker {
-            border: 2px solid #ff4444 !important;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7) !important;
         }
 
         .form-group {
@@ -737,53 +700,6 @@
             font-family: 'Courier New', monospace;
         }
 
-        /* Стили для преступлений */
-        .crime-tooltip {
-            position: absolute;
-            background: linear-gradient(135deg, #0a0f1a 0%, #151a2d 100%);
-            border: 2px solid #0066cc;
-            border-radius: 5px;
-            padding: 20px;
-            z-index: 100;
-            width: 380px;
-            max-width: 80vw;
-            box-shadow: 0 0 30px rgba(0, 100, 255, 0.4);
-            display: none;
-        }
-        
-        .crime-tooltip::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            pointer-events: none;
-            border-radius: 3px;
-        }
-        
-        .crime-tooltip h3 {
-            color: #00ffff;
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            border-bottom: 1px solid #0066cc;
-            padding-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .crime-controls {
-            display: flex;
-            gap: 8px;
-            margin: 15px 0;
-        }
-
-        .crime-controls .button {
-            flex: 1;
-            margin: 0;
-        }
-
         .territory-controls {
             margin: 15px 0;
         }
@@ -863,16 +779,11 @@
             <div class="drawing-status" id="drawing-status">
                 ⚠️ РЕЖИМ ВЫДЕЛЕНИЯ: Кликните и протяните для создания территории
             </div>
-
-            <div class="crime-status" id="crime-status">
-                🔍 РЕЖИМ ОТМЕТКИ ПРЕСТУПЛЕНИЙ: Кликните на карту для размещения маркера
-            </div>
             
             <div class="mode-selector">
                 <div class="mode-btn active" id="mode-new">Новая банда</div>
                 <div class="mode-btn" id="mode-add">Добавить территорию</div>
                 <div class="mode-btn" id="mode-delete">Удалить</div>
-                <div class="mode-btn crime" id="mode-crime">Преступления</div>
             </div>
             
             <div class="color-legend">
@@ -889,16 +800,6 @@
                 <input type="color" id="gang-color" class="color-input" value="#ff4444">
                 <button id="add-territory" class="button">🚨 Начать выделение территории</button>
                 <button id="cancel-drawing" class="button button-secondary" style="display: none;">❌ Отменить выделение</button>
-            </div>
-            
-            <!-- Элементы управления для режима преступлений -->
-            <div id="crime-controls" style="display: none;">
-                <h2>Управление преступлениями</h2>
-                <div class="crime-controls">
-                    <button id="add-crime" class="button button-crime">📍 Разместить маркер</button>
-                    <button id="delete-crime-mode" class="button button-danger">🗑️ Удалить преступления</button>
-                </div>
-                <button id="cancel-crime" class="button button-secondary" style="display: none;">❌ Отменить размещение</button>
             </div>
             
             <!-- НОВЫЙ БЛОК: Управление импортом/экспортом -->
@@ -941,21 +842,6 @@
             <button id="tooltip-close" class="button button-secondary">❌ Закрыть</button>
         </div>
     </div>
-
-    <!-- Всплывающее окно с информацией о преступлении -->
-    <div class="crime-tooltip" id="crime-tooltip">
-        <h3 id="crime-tooltip-title">МЕСТО ПРЕСТУПЛЕНИЯ</h3>
-        <p><span class="info-label">Заголовок:</span> <span class="info-value" id="crime-tooltip-title-value">НЕ УСТАНОВЛЕН</span></p>
-        <p><span class="info-label">Описание:</span></p>
-        <div class="description-container">
-            <div class="description-text" id="crime-tooltip-description-value">ИНФОРМАЦИЯ ОТСУТСТВУЕТ</div>
-        </div>
-        <div class="tooltip-buttons">
-            <button id="crime-tooltip-edit" class="button">✏️ Редактировать</button>
-            <button id="crime-tooltip-delete" class="button button-danger">🗑️ Удалить</button>
-            <button id="crime-tooltip-close" class="button button-secondary">❌ Закрыть</button>
-        </div>
-    </div>
     
     <!-- Модальное окно для редактирования банды -->
     <div class="modal" id="info-modal">
@@ -986,29 +872,6 @@
                 <button id="save-info" class="button">💾 СОХРАНИТЬ</button>
                 <button id="delete-territory" class="button button-danger">🗑️ УДАЛИТЬ ВСЕ</button>
                 <button id="cancel-edit" class="button button-secondary">❌ ОТМЕНА</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Модальное окно для редактирования преступления -->
-    <div class="modal" id="crime-modal">
-        <div class="modal-content">
-            <h2>📋 РЕДАКТИРОВАНИЕ ДОСЬЕ ПРЕСТУПЛЕНИЯ</h2>
-            
-            <div class="form-group">
-                <label for="modal-crime-title">Заголовок преступления:</label>
-                <input type="text" id="modal-crime-title" class="color-input" placeholder="ВВЕДИТЕ ЗАГОЛОВОК">
-            </div>
-            
-            <div class="form-group">
-                <label for="modal-crime-description">Описание преступления:</label>
-                <textarea id="modal-crime-description" placeholder="ОПИШИТЕ ПОДРОБНОСТИ ПРЕСТУПЛЕНИЯ..."></textarea>
-            </div>
-            
-            <div class="modal-buttons">
-                <button id="save-crime-info" class="button">💾 СОХРАНИТЬ</button>
-                <button id="delete-current-crime" class="button button-danger">🗑️ УДАЛИТЬ</button>
-                <button id="cancel-crime-edit" class="button button-secondary">❌ ОТМЕНА</button>
             </div>
         </div>
     </div>
@@ -1054,17 +917,11 @@
 
     // Глобальные переменные
     let territories = [];
-    let crimes = [];
 
     // Загрузка изображения карты Сан Фиерро
     const mapImage = new Image();
     mapImage.crossOrigin = "anonymous";
-    mapImage.src = 'https://i.imgur.com/VU8ljOJ.png';
-
-    // Загрузка изображения маркера преступления
-    const crimeMarkerImage = new Image();
-    crimeMarkerImage.crossOrigin = "anonymous";
-    crimeMarkerImage.src = 'https://i.imgur.com/8OeUOuE.png';
+    mapImage.src = 'https://i.imgur.com/5uPGT0q.png';
 
     // Переменные для карты
     let canvas, ctx;
@@ -1074,13 +931,10 @@
     let isDragging = false;
     let lastX, lastY;
     let isDrawing = false;
-    let isPlacingCrime = false;
-    let isDeletingCrime = false;
     let startX, startY;
     let currentTerritory = null;
     let selectedTerritory = null;
     let selectedGang = null;
-    let selectedCrime = null;
     let mode = 'new';
 
     // Функция для подсчета уникальных банд из импортированных данных
@@ -1105,7 +959,6 @@
     function exportData() {
         const data = {
             territories: territories,
-            crimes: crimes,
             exportDate: new Date().toISOString(),
             version: "1.0",
             description: "Экспорт данных полицейской базы криминальных группировок Сан Фиерро"
@@ -1127,7 +980,6 @@
             💾 Данные экспортированы на ПК!<br>
             🎯 Банд: <strong>${getUniqueGangsCount()}</strong><br> 
             🗺️ Территорий: <strong>${territories.length}</strong><br>
-            🔍 Преступлений: <strong>${crimes.length}</strong>
         `;
         indicator.style.display = 'block';
         indicator.style.background = '#003366';
@@ -1157,10 +1009,6 @@
                 // Проверяем структуру данных
                 if (!importedData.territories || !Array.isArray(importedData.territories)) {
                     throw new Error("Неверный формат: territories должен быть массивом");
-                }
-
-                if (!importedData.crimes || !Array.isArray(importedData.crimes)) {
-                    throw new Error("Неверный формат: crimes должен быть массивом");
                 }
 
                 // Проверяем структуру территории
@@ -1207,7 +1055,6 @@
                 .upsert({ 
                     id: 1, 
                     territories: territories,
-                    crimes: crimes,
                     updated_at: new Date().toISOString()
                 })
                 .select();
@@ -1230,21 +1077,21 @@
         try {
             if (!supabaseClient) {
                 console.error('Supabase клиент не создан');
-                return { territories: [], crimes: [] };
+                return { territories: [] };
             }
             
             console.log('📥 Загрузка данных из Supabase...');
             
             const { data, error } = await supabaseClient
                 .from('gang_territories')
-                .select('territories, crimes')
+                .select('territories')
                 .eq('id', 1)
                 .single();
 
             if (error) {
                 if (error.code === 'PGRST116') {
                     console.log('📭 В Supabase нет данных, создадим при первом сохранении');
-                    return { territories: [], crimes: [] };
+                    return { territories: [] };
                 }
                 console.error('❌ Ошибка Supabase:', error);
                 throw error;
@@ -1312,7 +1159,6 @@
             ✅ Данные сохранены в облако!<br>
             🎯 Банд: <strong>${gangCount}</strong><br> 
             🗺️ Территорий: <strong>${territories.length}</strong><br>
-            🔍 Преступлений: <strong>${crimes.length}</strong><br>
             ⚡ Автосинхронизация включена
         `;
         indicator.style.display = 'block';
@@ -1344,7 +1190,6 @@
         try {
             const data = await loadFromSupabase();
             territories = data.territories;
-            crimes = data.crimes;
             
             console.log('Загружено территорий:', territories.length);
             territories.forEach((t, i) => {
@@ -1359,7 +1204,6 @@
         } catch (error) {
             console.error('❌ Ошибка загрузки:', error);
             territories = [];
-            crimes = [];
             return false;
         }
     }
@@ -1411,10 +1255,6 @@
         canvas.height = canvas.parentElement.clientHeight;
         
         mapImage.onload = function() {
-            drawMap();
-        };
-        
-        crimeMarkerImage.onload = function() {
             drawMap();
         };
         
@@ -1475,22 +1315,6 @@
                     territory.x + territory.width / 2, 
                     territory.y + territory.height / 2
                 );
-            }
-        });
-        
-        // Рисуем маркеры преступлений
-        crimes.forEach(crime => {
-            if (crimeMarkerImage.complete) {
-                ctx.drawImage(crimeMarkerImage, crime.x - 8, crime.y - 10, 10, 10);
-            } else {
-                // Fallback - красный кружок если изображение не загрузилось
-                ctx.fillStyle = '#ff0000';
-                ctx.beginPath();
-                ctx.arc(crime.x, crime.y, 8, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
             }
         });
         
@@ -1594,52 +1418,34 @@
         document.getElementById('mode-new').classList.toggle('active', mode === 'new');
         document.getElementById('mode-add').classList.toggle('active', mode === 'add');
         document.getElementById('mode-delete').classList.toggle('active', mode === 'delete');
-        document.getElementById('mode-crime').classList.toggle('active', mode === 'crime');
         
         // Обновляем классы body для стилизации
         document.body.classList.toggle('delete-mode', mode === 'delete');
-        document.body.classList.toggle('crime-mode', mode === 'crime');
         
         // Показываем/скрываем соответствующие элементы управления
-        const crimeControls = document.getElementById('crime-controls');
         const territoryControls = document.getElementById('territory-controls');
         
         if (mode === 'new' || mode === 'add') {
             document.getElementById('mode-title').textContent = mode === 'new' ? 'Добавить новую группировку' : 'Добавить территорию к группировке';
             territoryControls.style.display = 'block';
-            crimeControls.style.display = 'none';
             document.getElementById('gang-name').disabled = mode === 'add';
             document.getElementById('gang-color').disabled = mode === 'add';
             canvas.style.cursor = 'crosshair';
-        } else if (mode === 'crime') {
-            document.getElementById('mode-title').textContent = 'Режим отметки преступлений';
-            territoryControls.style.display = 'none';
-            crimeControls.style.display = 'block';
-            canvas.style.cursor = 'crosshair';
-            isDeletingCrime = false;
         } else {
             document.getElementById('mode-title').textContent = 'Режим удаления территорий';
             territoryControls.style.display = 'block';
-            crimeControls.style.display = 'none';
             canvas.style.cursor = 'not-allowed';
         }
         
         // Сбрасываем состояния
         isDrawing = false;
-        isPlacingCrime = false;
-        isDeletingCrime = false;
         currentTerritory = null;
         selectedTerritory = null; // ДОБАВЛЕНО: сбрасываем выбранную территорию
         document.getElementById('add-territory').disabled = false;
         document.getElementById('cancel-drawing').style.display = 'none';
-        document.getElementById('cancel-crime').style.display = 'none';
-        document.getElementById('crime-status').style.display = 'none';
         document.getElementById('drawing-status').style.display = 'none';
-        document.getElementById('add-crime').disabled = false;
-        document.getElementById('delete-crime-mode').disabled = false;
         
         hideTooltip();
-        hideCrimeTooltip();
         drawMap();
     }
 
@@ -1681,147 +1487,6 @@
         document.getElementById('gang-tooltip').style.display = 'none';
         selectedTerritory = null;
         drawMap();
-    }
-
-    function showCrimeTooltip(crime, x, y) {
-        document.getElementById('crime-tooltip-title-value').textContent = crime.title || 'НЕ УСТАНОВЛЕН';
-        document.getElementById('crime-tooltip-description-value').textContent = crime.description || 'ИНФОРМАЦИЯ ОТСУТСТВУЕТ';
-        
-        const crimeTooltip = document.getElementById('crime-tooltip');
-        const tooltipWidth = crimeTooltip.offsetWidth;
-        const tooltipHeight = crimeTooltip.offsetHeight;
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        
-        let posX = x + 15;
-        let posY = y - tooltipHeight / 2;
-        
-        if (posX + tooltipWidth > windowWidth) {
-            posX = x - tooltipWidth - 15;
-        }
-        
-        if (posY < 0) {
-            posY = 10;
-        } else if (posY + tooltipHeight > windowHeight) {
-            posY = windowHeight - tooltipHeight - 10;
-        }
-        
-        crimeTooltip.style.left = posX + 'px';
-        crimeTooltip.style.top = posY + 'px';
-        crimeTooltip.style.display = 'block';
-        
-        selectedCrime = crime;
-    }
-
-    function hideCrimeTooltip() {
-        document.getElementById('crime-tooltip').style.display = 'none';
-        selectedCrime = null;
-    }
-
-    function deleteCrime(crime) {
-        const index = crimes.indexOf(crime);
-        if (index > -1) {
-            crimes.splice(index, 1);
-            drawMap();
-            hideCrimeTooltip();
-            selectedCrime = null;
-            saveData();
-        }
-    }
-
-    function saveCrimeInfo() {
-        if (!selectedCrime) {
-            alert('Ошибка: не выбрано преступление для редактирования');
-            return;
-        }
-        
-        const newTitle = document.getElementById('modal-crime-title').value.trim();
-        if (!newTitle) {
-            alert('Пожалуйста, введите заголовок преступления');
-            return;
-        }
-        
-        const newDescription = document.getElementById('modal-crime-description').value.trim();
-        
-        selectedCrime.title = newTitle;
-        selectedCrime.description = newDescription;
-        
-        drawMap();
-        saveData();
-        document.getElementById('crime-modal').style.display = 'none';
-        
-        alert('✅ Информация о преступлении успешно сохранена в облако!');
-    }
-
-    function openCrimeEditModal(crime) {
-        if (!crime) {
-            console.error('Преступление не определено');
-            return;
-        }
-        
-        document.getElementById('modal-crime-title').value = crime.title || '';
-        document.getElementById('modal-crime-description').value = crime.description || '';
-        
-        selectedCrime = crime;
-        document.getElementById('crime-modal').style.display = 'flex';
-        document.getElementById('crime-tooltip').style.display = 'none';
-    }
-
-    function startCrimePlacement() {
-        isPlacingCrime = true;
-        isDeletingCrime = false;
-        canvas.style.cursor = `url('https://i.imgur.com/8OeUOuE.png') 12 24, crosshair`;
-        document.getElementById('crime-status').style.display = 'block';
-        document.getElementById('cancel-crime').style.display = 'block';
-        document.getElementById('add-crime').disabled = true;
-        document.getElementById('delete-crime-mode').disabled = true;
-    }
-
-    function startCrimeDeletion() {
-        isDeletingCrime = true;
-        isPlacingCrime = false;
-        canvas.style.cursor = 'not-allowed';
-        document.getElementById('crime-status').style.display = 'block';
-        document.getElementById('crime-status').textContent = '🗑️ РЕЖИМ УДАЛЕНИЯ ПРЕСТУПЛЕНИЙ: Кликните на маркер для удаления';
-        document.getElementById('cancel-crime').style.display = 'block';
-        document.getElementById('add-crime').disabled = true;
-        document.getElementById('delete-crime-mode').disabled = true;
-    }
-
-    function placeCrimeMarker(e) {
-        if (!isPlacingCrime) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - offsetX) / scale;
-        const y = (e.clientY - rect.top - offsetY) / scale;
-        
-        const newCrime = {
-            x: x,
-            y: y,
-            title: '',
-            description: '',
-            date: new Date().toLocaleDateString('ru-RU')
-        };
-        
-        crimes.push(newCrime);
-        drawMap();
-        
-        selectedCrime = newCrime;
-        openCrimeEditModal(newCrime);
-        
-        cancelCrimePlacement();
-        saveData();
-    }
-
-    function cancelCrimePlacement() {
-        isPlacingCrime = false;
-        isDeletingCrime = false;
-        canvas.style.cursor = 'crosshair';
-        document.getElementById('crime-status').style.display = 'none';
-        document.getElementById('cancel-crime').style.display = 'none';
-        document.getElementById('add-crime').disabled = false;
-        document.getElementById('delete-crime-mode').disabled = false;
-        document.getElementById('crime-status').textContent = '🔍 РЕЖИМ ОТМЕТКИ ПРЕСТУПЛЕНИЙ: Кликните на карту для размещения маркера';
     }
 
     function startDrawing() {
@@ -1981,38 +1646,8 @@
         }
     }
 
-    function deleteCrimeAtPosition(e) {
-        if (!isDeletingCrime) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - offsetX) / scale;
-        const y = (e.clientY - rect.top - offsetY) / scale;
-        
-        for (let i = crimes.length - 1; i >= 0; i--) {
-            const crime = crimes[i];
-            const distance = Math.sqrt(Math.pow(x - crime.x, 2) + Math.pow(y - crime.y, 2));
-            if (distance < 12) {
-                if (confirm('Удалить это место преступления?')) {
-                    crimes.splice(i, 1);
-                    drawMap();
-                    saveData();
-                }
-                break;
-            }
-        }
-    }
-
     // Исправленная логика работы мыши
     function handleMouseDown(e) {
-        if (isPlacingCrime) {
-            placeCrimeMarker(e);
-            return;
-        }
-        
-        if (isDeletingCrime) {
-            deleteCrimeAtPosition(e);
-            return;
-        }
         
         if (mode === 'delete') {
             deleteTerritory(e);
@@ -2041,29 +1676,8 @@
             lastX = e.clientX;
             lastY = e.clientY;
             drawMap();
-        } else if (isDrawing && currentTerritory) {
+        } else (isDrawing && currentTerritory) {
             handleDrawing(e);
-        } else {
-            // Проверка наведения на маркеры преступлений
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left - offsetX) / scale;
-            const y = (e.clientY - rect.top - offsetY) / scale;
-            
-            let foundCrime = false;
-            for (let i = crimes.length - 1; i >= 0; i--) {
-                const crime = crimes[i];
-                const distance = Math.sqrt(Math.pow(x - crime.x, 2) + Math.pow(y - crime.y, 2));
-                if (distance < 12) {
-                    canvas.style.cursor = 'pointer';
-                    foundCrime = true;
-                    break;
-                }
-            }
-            
-            if (!foundCrime) {
-                canvas.style.cursor = mode === 'delete' ? 'not-allowed' : 'crosshair';
-            }
-        }
     }
 
     function handleMouseUp(e) {
@@ -2113,24 +1727,7 @@
         
         canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-        });
-        
-        canvas.addEventListener('click', (e) => {
-            if (mode === 'delete' || isPlacingCrime || isDeletingCrime || isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left - offsetX) / scale;
-            const y = (e.clientY - rect.top - offsetY) / scale;
-            
-            // Проверка клика по маркерам преступлений
-            for (let i = crimes.length - 1; i >= 0; i--) {
-                const crime = crimes[i];
-                const distance = Math.sqrt(Math.pow(x - crime.x, 2) + Math.pow(y - crime.y, 2));
-                if (distance < 12) {
-                    showCrimeTooltip(crime, e.clientX, e.clientY);
-                    return;
-                }
-            }
+        })
             
             // Проверка клика по территориям
             for (let i = territories.length - 1; i >= 0; i--) {
@@ -2155,15 +1752,10 @@
         document.getElementById('mode-new').addEventListener('click', () => setMode('new'));
         document.getElementById('mode-add').addEventListener('click', () => setMode('add'));
         document.getElementById('mode-delete').addEventListener('click', () => setMode('delete'));
-        document.getElementById('mode-crime').addEventListener('click', () => setMode('crime'));
         
         // Обработчики для кнопок управления
         document.getElementById('add-territory').addEventListener('click', startDrawing);
         document.getElementById('cancel-drawing').addEventListener('click', cancelDrawing);
-        
-        document.getElementById('add-crime').addEventListener('click', startCrimePlacement);
-        document.getElementById('delete-crime-mode').addEventListener('click', startCrimeDeletion);
-        document.getElementById('cancel-crime').addEventListener('click', cancelCrimePlacement);
         
         // ОБРАБОТЧИКИ ДЛЯ ЭКСПОРТА/ИМПОРТА
         document.getElementById('export-data').addEventListener('click', exportData);
@@ -2189,31 +1781,6 @@
             offsetX = 0;
             offsetY = 0;
             drawMap();
-        });
-        
-        document.getElementById('crime-tooltip-edit').addEventListener('click', () => {
-            if (selectedCrime) {
-                openCrimeEditModal(selectedCrime);
-            }
-        });
-        
-        document.getElementById('crime-tooltip-delete').addEventListener('click', () => {
-            if (selectedCrime && confirm('Удалить это место преступления?')) {
-                deleteCrime(selectedCrime);
-            }
-        });
-        
-        document.getElementById('crime-tooltip-close').addEventListener('click', hideCrimeTooltip);
-        
-        document.getElementById('save-crime-info').addEventListener('click', saveCrimeInfo);
-        document.getElementById('delete-current-crime').addEventListener('click', function() {
-            if (selectedCrime && confirm('Удалить это место преступления?')) {
-                deleteCrime(selectedCrime);
-                document.getElementById('crime-modal').style.display = 'none';
-            }
-        });
-        document.getElementById('cancel-crime-edit').addEventListener('click', () => {
-            document.getElementById('crime-modal').style.display = 'none';
         });
         
         // Обработчики для модального окна банд
@@ -2298,12 +1865,6 @@
             if (e.target === this) {
                 this.style.display = 'none';
                 selectedTerritory = null;
-            }
-        });
-        
-        document.getElementById('crime-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.style.display = 'none';
             }
         });
 
